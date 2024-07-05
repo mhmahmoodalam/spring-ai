@@ -17,7 +17,9 @@ this is the POC project for spring Ai with olama
 - define the llama enpoint and model in sprinboot .properties
 - define the controller
 
+### defining the context using RAG
 
+[image](./documentation/RAG_Architecure.png)
 
 ### Additional Links
 
