@@ -8,16 +8,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 
 @Configuration
 public class RAGETLConfiguration {
-
-    // define the reource to be used ( pdf)
-    @Value("classpath:/docs/softwarearchitecture.pdf")
-    private Resource customContextData;
 
     // define the vector store
     @Value("vectorstore.json")
@@ -27,7 +26,8 @@ public class RAGETLConfiguration {
     // define the vector store (initialize by passing the embedding client)
     @Bean
     SimpleVectorStore simpleVectorStore(EmbeddingModel embeddingModel){
-        SimpleVectorStore simpleVectorStore = new SimpleVectorStore(embeddingModel);
+        SimpleVectorStore simpleVectorStore = SimpleVectorStore.builder(embeddingModel)
+                .build();
         File vectorStoreFile = getVectorStorFile();
         if(vectorStoreFile.exists()){
             simpleVectorStore.load(vectorStoreFile);
@@ -35,14 +35,20 @@ public class RAGETLConfiguration {
             // use the file format redaer textRedaer/PdfPageReader etc to read the file
             // define a text splitter that will consume the redaer ouput ( Documents)
             // add the split dcouments to the vector store
-            AllDocumentTypeReader documentReader = new AllDocumentTypeReader(customContextData);
-            var documents = documentReader.loadText();
-            TokenTextSplitter textSplitter = new TokenTextSplitter();
-            var tokenizedDoceuments = textSplitter.apply(documents);
-
-            simpleVectorStore.add(tokenizedDoceuments);
-            simpleVectorStore.save(vectorStoreFile);
-
+            ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            try {
+                Resource[] resources = resolver.getResources("classpath:/docs/knowledge/*.md");
+                for (Resource resource : resources) {
+                    AllDocumentTypeReader documentReader = new AllDocumentTypeReader(resource);
+                    var documents = documentReader.loadText();
+                    TokenTextSplitter textSplitter = new TokenTextSplitter();
+                    var tokenizedDocuments = textSplitter.apply(documents);
+                    simpleVectorStore.add(tokenizedDocuments);
+                }
+                simpleVectorStore.save(vectorStoreFile);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
         return simpleVectorStore;
     }
