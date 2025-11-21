@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring AI Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: #4a90e2;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            margin-bottom: 0.5rem;
+        }
+
+        .chat-mode-selector {
+            margin-top: 1rem;
+        }
+
+        .chat-mode-selector select {
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 4px;
+            background-color: white;
+            color: #333;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 1rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            overflow-y: auto;
+            max-height: 60vh;
+            border: 1px solid #e1e5e9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.user .message-content {
+            background-color: #4a90e2;
+            color: white;
+        }
+
+        .message.ai .message-content {
+            background-color: #f1f3f4;
+            color: #333;
+        }
+
+        .message-header {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 0.5rem;
+            background-color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .message-input:focus {
+            border-color: #4a90e2;
+        }
+
+        .send-button {
+            padding: 0.75rem 1.5rem;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        .send-button:hover {
+            background-color: #357abd;
+        }
+
+        .send-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            font-style: italic;
+            color: #666;
+            margin: 1rem 0;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin: 2rem 0;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4a90e2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Spring AI Chat Interface</h1>
+        <div class="chat-mode-selector">
+            <label for="chatMode">Chat Mode: </label>
+            <select id="chatMode">
+                <option value="domain">Domain Context (RAG)</option>
+                <option value="simple">Simple Chat</option>
+                <option value="auto-rag">Auto RAG</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <strong>Welcome to Spring AI Chat!</strong><br>
+                I'm your AI assistant powered by Spring AI. Choose a chat mode above and start asking questions about your domain knowledge or general topics.
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            AI is typing...
+        </div>
+
+        <div class="input-container">
+            <input type="text" id="messageInput" class="message-input" placeholder="Type your message here..." maxlength="1000">
+            <button id="sendButton" class="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatMode = document.getElementById('chatMode');
+        const typingIndicator = document.getElementById('typingIndicator');
+        
+        const conversationId = generateConversationId();
+
+        function generateConversationId() {
+            return 'conv-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+        }
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-header">${isUser ? 'You' : 'AI Assistant'} • ${timeString}</div>
+                    ${content}
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            typingIndicator.style.display = 'block';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            messageInput.value = '';
+            
+            // Disable input while processing
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+            showTypingIndicator();
+
+            try {
+                const response = await fetch(getApiEndpoint(), {
+                    method: getApiMethod(),
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: getRequestBody(message)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const aiResponse = await response.text();
+                addMessage(aiResponse);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage(`Sorry, I encountered an error: ${error.message}`, false);
+            } finally {
+                hideTypingIndicator();
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        function getApiEndpoint() {
+            const mode = chatMode.value;
+            const baseUrl = '/api/v1';
+            
+            switch (mode) {
+                case 'simple':
+                    return `${baseUrl}/chat/${conversationId}?message=${encodeURIComponent(messageInput.value.trim())}`;
+                case 'domain':
+                    return `${baseUrl}/domain/chat/${conversationId}`;
+                case 'auto-rag':
+                    return `${baseUrl}/auto-rag/chat/${conversationId}`;
+                default:
+                    return `${baseUrl}/domain/chat/${conversationId}`;
+            }
+        }
+
+        function getApiMethod() {
+            return chatMode.value === 'simple' ? 'GET' : 'POST';
+        }
+
+        function getRequestBody(message) {
+            if (chatMode.value === 'simple') {
+                return null;
+            }
+            return JSON.stringify({ message: message });
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Focus on input field when page loads
+        messageInput.focus();
+    </script>
+</body>
+</html>
