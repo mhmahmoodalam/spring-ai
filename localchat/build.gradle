@@ -26,6 +26,7 @@ dependencies {
 
 	implementation platform("org.springframework.ai:spring-ai-bom:${springAiVersion}")
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.ai:spring-ai-markdown-document-reader'
 	//implementation 'org.springframework.ai:spring-ai-starter-mcp-client'
 	//implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'

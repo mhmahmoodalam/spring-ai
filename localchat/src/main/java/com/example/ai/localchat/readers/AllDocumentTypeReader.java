@@ -1,6 +1,8 @@
 package com.example.ai.localchat.readers;
 
 import org.springframework.ai.document.Document;
+import org.springframework.ai.reader.markdown.MarkdownDocumentReader;
+import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfig;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.core.io.Resource;
 
@@ -20,7 +22,7 @@ public class AllDocumentTypeReader {
          * such as PDF, DOC/DOCX, PPT/PPTX, and HTML. For a comprehensive list of supported formats,
          * refer to the Tika documentation.
          */
-        TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(resource);
-        return tikaDocumentReader.read();
+        MarkdownDocumentReader markdownDocumentReader = new MarkdownDocumentReader(resource, MarkdownDocumentReaderConfig.defaultConfig());
+        return markdownDocumentReader.read();
     }
 }

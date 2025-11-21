@@ -38,7 +38,7 @@ public class ChatController {
         this.retrievalAugmentationAdvisor = RetrievalAugmentationAdvisor.builder()
                 .documentRetriever(VectorStoreDocumentRetriever.builder()
                         .vectorStore(vectorStore)
-                        .similarityThreshold(0.50)
+                        .similarityThreshold(0.3)  // Lower threshold for better recall with smaller models
                         .topK(10)
                         .build())
                 .build();
@@ -54,19 +54,80 @@ public class ChatController {
         return promptRequest.call().content();
     }
 
-    @GetMapping("/api/v1/domain/chat/{conversationId}")
+    @PostMapping("/api/v1/domain/chat/{conversationId}")
     public String replyToDomainContextChat(@PathVariable String conversationId,@RequestBody ChatRequest request){
-        var similarDocuments = vectorStore.similaritySearch(SearchRequest.builder().query(request.getMessage())
-                .topK(10).build());
-       var contentList= similarDocuments.stream().map(Document::getFormattedContent).toList();
-       var promptTemplate = new PromptTemplate(ragPromptTemplate);
-       var promptParameters = new HashMap<String,Object>();
-       promptParameters.put("input",request.getMessage());
-       promptParameters.put("documents", String.join("\n",contentList));
+        // Use a lower similarity threshold for better retrieval with smaller models
+        var searchRequest = SearchRequest.builder()
+                .query(request.getMessage())
+                .topK(20)
+                .similarityThreshold(0.3)  // Lower threshold for better recall
+                .build();
+        
+        var similarDocuments = vectorStore.similaritySearch(searchRequest);
+        
+        // Debug logging
+        System.out.println("Query: " + request.getMessage());
+        System.out.println("Found " + similarDocuments.size() + " similar documents");
+        
+        if (similarDocuments.isEmpty()) {
+            System.out.println("No documents found with similarity threshold 0.3");
+            // Try without similarity threshold
+            var fallbackRequest = SearchRequest.builder()
+                    .query(request.getMessage())
+                    .topK(20)
+                    .build();
+            similarDocuments = vectorStore.similaritySearch(fallbackRequest);
+            System.out.println("Fallback search found " + similarDocuments.size() + " documents");
+        }
+        
+        var contentList = similarDocuments.stream()
+                .peek(doc -> System.out.println("Document content preview: " + 
+                    doc.getFormattedContent().substring(0, Math.min(100, doc.getFormattedContent().length())) + "..."))
+                .map(Document::getFormattedContent)
+                .toList();
+                
+        var promptTemplate = new PromptTemplate(ragPromptTemplate);
+        var promptParameters = new HashMap<String,Object>();
+        promptParameters.put("input", request.getMessage());
+        promptParameters.put("documents", String.join("\n\n", contentList));
+        
         var promptRequest = chatClient.prompt(promptTemplate.create(promptParameters))
                 .advisors(chatMemoryAdvisor)
                 .advisors(advisors -> advisors.param(
                         ChatMemory.CONVERSATION_ID, conversationId));
         return promptRequest.call().content();
     }
+
+    @PostMapping("/api/v1/auto-rag/chat/{conversationId}")
+    public String replyWithAutoRAG(@PathVariable String conversationId, @RequestBody ChatRequest request){
+        // This uses the built-in RetrievalAugmentationAdvisor for comparison
+        var promptRequest = chatClient.prompt(new Prompt(new UserMessage(request.getMessage())))
+                .advisors(chatMemoryAdvisor, retrievalAugmentationAdvisor)
+                .advisors(advisors -> advisors.param(
+                        ChatMemory.CONVERSATION_ID, conversationId));
+        return promptRequest.call().content();
+    }
+
+    @GetMapping("/api/v1/test/documents")
+    public String testDocumentRetrieval(@RequestParam(value = "query", defaultValue = "test") String query){
+        var searchRequest = SearchRequest.builder()
+                .query(query)
+                .topK(5)
+                .build();
+        
+        var documents = vectorStore.similaritySearch(searchRequest);
+        StringBuilder result = new StringBuilder();
+        result.append("Found ").append(documents.size()).append(" documents for query: '").append(query).append("'\n\n");
+        
+        for (int i = 0; i < documents.size(); i++) {
+            var doc = documents.get(i);
+            result.append("Document ").append(i + 1).append(":\n");
+            result.append("Content preview: ").append(doc.getFormattedContent().substring(0, Math.min(200, doc.getFormattedContent().length()))).append("...\n");
+            result.append("Metadata: ").append(doc.getMetadata()).append("\n\n");
+        }
+        
+        return result.toString();
+    }
+
+
 }
