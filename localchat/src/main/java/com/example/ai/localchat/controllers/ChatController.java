@@ -1,6 +1,8 @@
 package com.example.ai.localchat.controllers;
 
 import com.example.ai.localchat.ChatRequest;
+import com.example.ai.localchat.service.HybridRetrievalService;
+import com.example.ai.localchat.service.TechnicalRAGService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -15,9 +17,11 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 
 @RestController
 public class ChatController {
@@ -26,15 +30,24 @@ public class ChatController {
     private final RetrievalAugmentationAdvisor retrievalAugmentationAdvisor;
     private final MessageChatMemoryAdvisor chatMemoryAdvisor;
     private final VectorStore vectorStore;
+    private final TechnicalRAGService ragService;
+    private final HybridRetrievalService retrievalService;
 
     @Value("classpath:/prompts/rag-prompt-template.st")
     private Resource ragPromptTemplate;
 
     @Autowired
-    public ChatController(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory, VectorStore vectorStore) {
-        this.chatClient = chatClientBuilder.clone().build();
+    public ChatController(
+            ChatClient chatClient,
+            ChatMemory chatMemory,
+            VectorStore vectorStore,
+            TechnicalRAGService ragService,
+            HybridRetrievalService retrievalService) {
+        this.chatClient = chatClient;
         this.vectorStore = vectorStore;
         this.chatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
+        this.ragService = ragService;
+        this.retrievalService= retrievalService;
         this.retrievalAugmentationAdvisor = RetrievalAugmentationAdvisor.builder()
                 .documentRetriever(VectorStoreDocumentRetriever.builder()
                         .vectorStore(vectorStore)
@@ -99,13 +112,19 @@ public class ChatController {
     }
 
     @PostMapping("/api/v1/auto-rag/chat/{conversationId}")
-    public String replyWithAutoRAG(@PathVariable String conversationId, @RequestBody ChatRequest request){
-        // This uses the built-in RetrievalAugmentationAdvisor for comparison
-        var promptRequest = chatClient.prompt(new Prompt(new UserMessage(request.getMessage())))
-                .advisors(chatMemoryAdvisor, retrievalAugmentationAdvisor)
-                .advisors(advisors -> advisors.param(
-                        ChatMemory.CONVERSATION_ID, conversationId));
-        return promptRequest.call().content();
+    public ResponseEntity<String> replyWithAutoRAG(@PathVariable String conversationId, @RequestBody ChatRequest request){
+
+
+        // Step 1: Retrieve relevant documents
+        List<Document> documents = retrievalService.hybridSearch(request.getMessage());
+
+        // Step 2: Generate answer with RAG
+        String answer = ragService.queryWithRAG(
+                request.getMessage(),
+                ""
+        );
+
+        return ResponseEntity.ok(answer);
     }
 
     @GetMapping("/api/v1/test/documents")
@@ -128,6 +147,5 @@ public class ChatController {
         
         return result.toString();
     }
-
 
 }

@@ -1,320 +1,626 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring AI Chat</title>
+    <title>Spring AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --radius: 0.65rem;
+            --background: oklch(1 0 0);
+            --foreground: oklch(0.141 0.005 285.823);
+            --card: oklch(1 0 0);
+            --card-foreground: oklch(0.141 0.005 285.823);
+            --popover: oklch(1 0 0);
+            --popover-foreground: oklch(0.141 0.005 285.823);
+            --primary: oklch(0.541 0.281 293.009);
+            --primary-foreground: oklch(0.969 0.016 293.756);
+            --secondary: oklch(0.967 0.001 286.375);
+            --secondary-foreground: oklch(0.21 0.006 285.885);
+            --muted: oklch(0.967 0.001 286.375);
+            --muted-foreground: oklch(0.552 0.016 285.938);
+            --accent: oklch(0.967 0.001 286.375);
+            --accent-foreground: oklch(0.21 0.006 285.885);
+            --destructive: oklch(0.577 0.245 27.325);
+            --border: oklch(0.92 0.004 286.32);
+            --input: oklch(0.92 0.004 286.32);
+            --ring: oklch(0.702 0.183 293.541);
+        }
+
+        .dark {
+            --background: oklch(0.141 0.005 285.823);
+            --foreground: oklch(0.985 0 0);
+            --card: oklch(0.21 0.006 285.885);
+            --card-foreground: oklch(0.985 0 0);
+            --popover: oklch(0.21 0.006 285.885);
+            --popover-foreground: oklch(0.985 0 0);
+            --primary: oklch(0.606 0.25 292.717);
+            --primary-foreground: oklch(0.969 0.016 293.756);
+            --secondary: oklch(0.274 0.006 286.033);
+            --secondary-foreground: oklch(0.985 0 0);
+            --muted: oklch(0.274 0.006 286.033);
+            --muted-foreground: oklch(0.705 0.015 286.067);
+            --accent: oklch(0.274 0.006 286.033);
+            --accent-foreground: oklch(0.985 0 0);
+            --destructive: oklch(0.704 0.191 22.216);
+            --border: oklch(1 0 0 / 10%);
+            --input: oklch(1 0 0 / 15%);
+            --ring: oklch(0.38 0.189 293.745);
+        }
+
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            border-color: var(--border);
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f7fa;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+            background-color: var(--background);
+            color: var(--foreground);
         }
 
-        .header {
-            background-color: #4a90e2;
-            color: white;
+        .search-input-focus:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 15%, transparent);
+        }
+
+        .thinking-dots::after {
+            content: '';
+            animation: thinking 1.4s infinite;
+        }
+
+        @keyframes thinking {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--muted);
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: var(--muted-foreground);
+        }
+
+        /* Markdown Styles */
+        .markdown-content h1 { font-size: 1.875rem; font-weight: 700; margin: 1.5rem 0 1rem; line-height: 1.2; }
+        .markdown-content h2 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 1rem; line-height: 1.3; }
+        .markdown-content h3 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.75rem; line-height: 1.4; }
+        .markdown-content h4 { font-size: 1.125rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+        .markdown-content p { margin: 1rem 0; line-height: 1.7; }
+        .markdown-content ul, .markdown-content ol { margin: 1rem 0; padding-left: 1.5rem; }
+        .markdown-content li { margin: 0.5rem 0; line-height: 1.6; }
+        .markdown-content code {
+            background: var(--muted);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: 'Courier New', monospace;
+        }
+        .markdown-content pre {
+            background: var(--muted);
             padding: 1rem;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .header h1 {
-            margin-bottom: 0.5rem;
-        }
-
-        .chat-mode-selector {
-            margin-top: 1rem;
-        }
-
-        .chat-mode-selector select {
-            padding: 0.5rem;
-            font-size: 1rem;
-            border: none;
-            border-radius: 4px;
-            background-color: white;
-            color: #333;
-        }
-
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
-            padding: 1rem;
-        }
-
-        .chat-messages {
-            flex: 1;
-            background-color: white;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            overflow-y: auto;
-            max-height: 60vh;
-            border: 1px solid #e1e5e9;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .message {
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: flex-start;
-        }
-
-        .message.user {
-            justify-content: flex-end;
-        }
-
-        .message-content {
-            max-width: 70%;
-            padding: 0.75rem 1rem;
-            border-radius: 18px;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-        }
-
-        .message.user .message-content {
-            background-color: #4a90e2;
-            color: white;
-        }
-
-        .message.ai .message-content {
-            background-color: #f1f3f4;
-            color: #333;
-        }
-
-        .message-header {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            margin-bottom: 0.25rem;
-        }
-
-        .input-container {
-            display: flex;
-            gap: 0.5rem;
-            background-color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            border: 1px solid #e1e5e9;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .message-input {
-            flex: 1;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        .message-input:focus {
-            border-color: #4a90e2;
-        }
-
-        .send-button {
-            padding: 0.75rem 1.5rem;
-            background-color: #4a90e2;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.2s;
-        }
-
-        .send-button:hover {
-            background-color: #357abd;
-        }
-
-        .send-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        .typing-indicator {
-            display: none;
-            font-style: italic;
-            color: #666;
+            border-radius: var(--radius);
+            overflow-x: auto;
             margin: 1rem 0;
         }
-
-        .welcome-message {
-            text-align: center;
-            color: #666;
+        .markdown-content pre code {
+            background: transparent;
+            padding: 0;
+        }
+        .markdown-content blockquote {
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: var(--muted-foreground);
             font-style: italic;
+        }
+        .markdown-content a {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        .markdown-content a:hover {
+            opacity: 0.8;
+        }
+        .markdown-content strong { font-weight: 600; }
+        .markdown-content em { font-style: italic; }
+        .markdown-content hr {
+            border: none;
+            border-top: 1px solid var(--border);
             margin: 2rem 0;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #4a90e2;
+        }
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .markdown-content th, .markdown-content td {
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            text-align: left;
+        }
+        .markdown-content th {
+            background: var(--muted);
+            font-weight: 600;
+        }
+
+        .action-btn {
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.8;
+        }
+
+        .tab-active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .source-card {
+            transition: all 0.2s;
+        }
+
+        .source-card:hover {
+            transform: translateX(4px);
         }
     </style>
 </head>
-<body>
-    <div class="header">
-        <h1>Spring AI Chat Interface</h1>
-        <div class="chat-mode-selector">
-            <label for="chatMode">Chat Mode: </label>
-            <select id="chatMode">
-                <option value="domain">Domain Context (RAG)</option>
-                <option value="simple">Simple Chat</option>
-                <option value="auto-rag">Auto RAG</option>
-            </select>
+<body class="min-h-screen">
+<!-- Header -->
+<header class="sticky top-0 z-50 border-b" style="background-color: var(--background);">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background-color: var(--primary);">
+                <i class="fas fa-brain text-sm" style="color: var(--primary-foreground);"></i>
+            </div>
+            <h1 class="text-lg font-semibold">Spring AI</h1>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button id="shareButton" class="px-3 py-1.5 text-sm rounded-lg border transition-colors flex items-center gap-2" style="background-color: var(--secondary); color: var(--secondary-foreground);">
+                <i class="fas fa-share-nodes text-xs"></i>
+                <span class="hidden sm:inline">Share</span>
+            </button>
+
+            <button id="sidebarToggle" class="lg:hidden p-2 rounded-lg hover:opacity-80" style="background-color: var(--secondary);">
+                <i class="fas fa-bars text-sm"></i>
+            </button>
         </div>
     </div>
+</header>
 
-    <div class="chat-container">
-        <div class="chat-messages" id="chatMessages">
-            <div class="welcome-message">
-                <strong>Welcome to Spring AI Chat!</strong><br>
-                I'm your AI assistant powered by Spring AI. Choose a chat mode above and start asking questions about your domain knowledge or general topics.
+<div class="flex">
+    <!-- Main Content -->
+    <main class="flex-1 min-h-screen lg:mr-80">
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="max-w-3xl mx-auto px-4 py-20">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-semibold mb-3" style="color: var(--foreground);">What can I help with?</h2>
+                <p class="text-lg" style="color: var(--muted-foreground);">Ask anything about your domain knowledge or general topics</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-12">
+                <button class="example-question text-left p-4 rounded-xl border transition-all hover:border-opacity-100" style="background-color: var(--card); border-color: var(--border);">
+                    <div class="text-sm font-medium mb-1">Explain RAG architecture</div>
+                    <div class="text-xs" style="color: var(--muted-foreground);">Learn about retrieval systems</div>
+                </button>
+                <button class="example-question text-left p-4 rounded-xl border transition-all hover:border-opacity-100" style="background-color: var(--card); border-color: var(--border);">
+                    <div class="text-sm font-medium mb-1">Spring AI capabilities</div>
+                    <div class="text-xs" style="color: var(--muted-foreground);">Discover framework features</div>
+                </button>
+                <button class="example-question text-left p-4 rounded-xl border transition-all hover:border-opacity-100" style="background-color: var(--card); border-color: var(--border);">
+                    <div class="text-sm font-medium mb-1">Best practices for AI apps</div>
+                    <div class="text-xs" style="color: var(--muted-foreground);">Get expert recommendations</div>
+                </button>
+                <button class="example-question text-left p-4 rounded-xl border transition-all hover:border-opacity-100" style="background-color: var(--card); border-color: var(--border);">
+                    <div class="text-sm font-medium mb-1">Vector database options</div>
+                    <div class="text-xs" style="color: var(--muted-foreground);">Compare different solutions</div>
+                </button>
             </div>
         </div>
 
-        <div class="typing-indicator" id="typingIndicator">
-            AI is typing...
+        <!-- Content Area -->
+        <div id="contentArea" class="hidden max-w-3xl mx-auto px-4 pb-32 pt-6">
+            <div id="articlesContainer"></div>
         </div>
+    </main>
 
-        <div class="input-container">
-            <input type="text" id="messageInput" class="message-input" placeholder="Type your message here..." maxlength="1000">
-            <button id="sendButton" class="send-button">Send</button>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-80 border-l overflow-y-auto custom-scrollbar fixed right-0 top-14 bottom-0 transform lg:transform-none transition-transform duration-300 ease-in-out translate-x-full lg:translate-x-0 z-40" style="background-color: var(--card);">
+        <div class="p-4">
+            <!-- Tabs -->
+            <div class="flex gap-4 mb-6 border-b pb-2">
+                <button class="text-sm font-medium pb-2 tab-active" style="color: var(--primary);">
+                    <i class="fas fa-brain mr-1"></i> Answer
+                </button>
+                <button class="text-sm font-medium pb-2" style="color: var(--muted-foreground);">
+                    <i class="fas fa-link mr-1"></i> Links
+                </button>
+                <button class="text-sm font-medium pb-2" style="color: var(--muted-foreground);">
+                    <i class="fas fa-image mr-1"></i> Images
+                </button>
+            </div>
+
+            <!-- Sources -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--foreground);">Sources</h3>
+                    <span id="sourcesCount" class="text-xs px-2 py-0.5 rounded" style="background-color: var(--muted); color: var(--muted-foreground);">0</span>
+                </div>
+                <div id="sourcesList" class="space-y-2">
+                    <div class="text-sm italic" style="color: var(--muted-foreground);">No sources yet</div>
+                </div>
+            </div>
+
+            <!-- Related Questions -->
+            <div class="mb-6">
+                <h3 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color: var(--foreground);">Related</h3>
+                <div class="space-y-2">
+                    <button class="w-full text-left p-3 rounded-lg border transition-all text-sm" style="background-color: var(--background); border-color: var(--border); color: var(--foreground);">
+                        How does RAG compare to fine-tuning?
+                    </button>
+                    <button class="w-full text-left p-3 rounded-lg border transition-all text-sm" style="background-color: var(--background); border-color: var(--border); color: var(--foreground);">
+                        What vector databases work with Spring AI?
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+</div>
+
+<!-- Fixed Bottom Input -->
+<div class="fixed bottom-0 left-0 right-0 lg:right-80 px-4 py-4" style="background: linear-gradient(to top, var(--background) 85%, transparent);">
+    <div class="max-w-3xl mx-auto">
+        <div class="rounded-xl border overflow-hidden search-input-focus transition-all" style="background-color: var(--card);">
+            <div class="flex items-end p-2 gap-2">
+                <!-- Model/Mode Selector -->
+                <button id="modelSelectorBtn" class="p-2 rounded-lg hover:opacity-80 flex-shrink-0" style="color: var(--muted-foreground);" title="Select mode">
+                    <i class="fas fa-sliders text-sm"></i>
+                </button>
+
+                <!-- Model Dropdown -->
+                <div id="modelDropdown" class="hidden absolute bottom-16 left-6 rounded-lg border shadow-lg p-2 min-w-48" style="background-color: var(--popover); border-color: var(--border);">
+                    <div class="text-xs font-semibold mb-2 px-2" style="color: var(--muted-foreground);">Chat Mode</div>
+                    <button class="mode-option w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-1" data-mode="domain" style="background-color: var(--accent); color: var(--accent-foreground);">
+                        <i class="fas fa-database mr-2"></i> Domain Context (RAG)
+                    </button>
+                    <button class="mode-option w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-1" data-mode="simple">
+                        <i class="fas fa-comments mr-2"></i> Simple Chat
+                    </button>
+                    <button class="mode-option w-full text-left px-3 py-2 rounded-lg text-sm transition-colors" data-mode="auto-rag">
+                        <i class="fas fa-magic mr-2"></i> Auto RAG
+                    </button>
+                </div>
+
+                <textarea
+                        id="messageInput"
+                        rows="1"
+                        class="flex-1 px-3 py-2.5 resize-none focus:outline-none"
+                        placeholder="Ask anything..."
+                        maxlength="1000"
+                        style="background: transparent; color: var(--foreground); max-height: 120px;"
+                ></textarea>
+
+                <!-- File Upload -->
+                <label class="p-2 rounded-lg hover:opacity-80 cursor-pointer flex-shrink-0" style="color: var(--muted-foreground);" title="Upload file">
+                    <i class="fas fa-paperclip text-sm"></i>
+                    <input type="file" id="fileUpload" class="hidden" accept=".pdf,.doc,.docx,.txt">
+                </label>
+
+                <!-- Send Button -->
+                <button id="sendButton" class="px-4 py-2.5 rounded-lg transition-opacity hover:opacity-90 flex-shrink-0" style="background-color: var(--primary); color: var(--primary-foreground);">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+            </div>
+        </div>
+        <div class="text-center mt-2">
+            <p class="text-xs" style="color: var(--muted-foreground);">Powered by Spring AI</p>
         </div>
     </div>
+</div>
 
-    <script>
-        const chatMessages = document.getElementById('chatMessages');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const chatMode = document.getElementById('chatMode');
-        const typingIndicator = document.getElementById('typingIndicator');
-        
-        const conversationId = generateConversationId();
+<script>
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const contentArea = document.getElementById('contentArea');
+    const articlesContainer = document.getElementById('articlesContainer');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const shareButton = document.getElementById('shareButton');
+    const modelSelectorBtn = document.getElementById('modelSelectorBtn');
+    const modelDropdown = document.getElementById('modelDropdown');
+    const fileUpload = document.getElementById('fileUpload');
 
-        function generateConversationId() {
-            return 'conv-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
-        }
+    const conversationId = generateConversationId();
+    let messageCount = 0;
+    let currentArticle = null;
+    let currentMode = 'domain';
 
-        function addMessage(content, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
-            
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
+    function generateConversationId() {
+        return 'conv-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+    }
+
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    // Model selector
+    modelSelectorBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        modelDropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+        modelDropdown.classList.add('hidden');
+    });
+
+    document.querySelectorAll('.mode-option').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentMode = this.dataset.mode;
+            document.querySelectorAll('.mode-option').forEach(b => {
+                b.style.backgroundColor = 'transparent';
             });
-            
-            messageDiv.innerHTML = `
-                <div class="message-content">
-                    <div class="message-header">${isUser ? 'You' : 'AI Assistant'} • ${timeString}</div>
-                    ${content}
-                </div>
-            `;
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function showTypingIndicator() {
-            typingIndicator.style.display = 'block';
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function hideTypingIndicator() {
-            typingIndicator.style.display = 'none';
-        }
-
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-
-            // Add user message
-            addMessage(message, true);
-            messageInput.value = '';
-            
-            // Disable input while processing
-            messageInput.disabled = true;
-            sendButton.disabled = true;
-            showTypingIndicator();
-
-            try {
-                const response = await fetch(getApiEndpoint(), {
-                    method: getApiMethod(),
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: getRequestBody(message)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const aiResponse = await response.text();
-                addMessage(aiResponse);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                addMessage(`Sorry, I encountered an error: ${error.message}`, false);
-            } finally {
-                hideTypingIndicator();
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                messageInput.focus();
-            }
-        }
-
-        function getApiEndpoint() {
-            const mode = chatMode.value;
-            const baseUrl = '/api/v1';
-            
-            switch (mode) {
-                case 'simple':
-                    return `${baseUrl}/chat/${conversationId}?message=${encodeURIComponent(messageInput.value.trim())}`;
-                case 'domain':
-                    return `${baseUrl}/domain/chat/${conversationId}`;
-                case 'auto-rag':
-                    return `${baseUrl}/auto-rag/chat/${conversationId}`;
-                default:
-                    return `${baseUrl}/domain/chat/${conversationId}`;
-            }
-        }
-
-        function getApiMethod() {
-            return chatMode.value === 'simple' ? 'GET' : 'POST';
-        }
-
-        function getRequestBody(message) {
-            if (chatMode.value === 'simple') {
-                return null;
-            }
-            return JSON.stringify({ message: message });
-        }
-
-        // Event listeners
-        sendButton.addEventListener('click', sendMessage);
-        
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
+            this.style.backgroundColor = 'var(--accent)';
+            this.style.color = 'var(--accent-foreground)';
+            modelDropdown.classList.add('hidden');
         });
+    });
 
-        // Focus on input field when page loads
-        messageInput.focus();
-    </script>
+    // Share button
+    shareButton.addEventListener('click', () => {
+        alert('Share functionality - would copy link to clipboard');
+    });
+
+    // File upload
+    fileUpload.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            console.log('File selected:', e.target.files[0].name);
+        }
+    });
+
+    // Sidebar toggle
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('translate-x-full');
+        sidebarOverlay.classList.toggle('hidden');
+    });
+
+    sidebarOverlay.addEventListener('click', () => {
+        sidebar.classList.add('translate-x-full');
+        sidebarOverlay.classList.add('hidden');
+    });
+
+    // Example questions
+    document.querySelectorAll('.example-question').forEach(btn => {
+        btn.addEventListener('click', function() {
+            messageInput.value = this.querySelector('.text-sm').textContent;
+            sendMessage();
+        });
+    });
+
+    function createArticle(question) {
+        welcomeScreen.classList.add('hidden');
+        contentArea.classList.remove('hidden');
+
+        const article = document.createElement('article');
+        article.className = 'fade-in mb-12';
+        article.innerHTML = `
+            <header class="mb-6">
+                <h1 class="text-3xl font-semibold mb-4" style="color: var(--foreground);">${escapeHtml(question)}</h1>
+                <div id="thinkingIndicator" class="flex items-center gap-2 text-sm" style="color: var(--muted-foreground);">
+                    <i class="fas fa-brain"></i>
+                    <span class="thinking-dots">Working</span>
+                </div>
+            </header>
+            <div id="answerContent" class="markdown-content prose prose-lg max-w-none" style="color: var(--foreground);"></div>
+            <div id="actionButtons" class="hidden mt-6 pt-6 border-t flex items-center gap-3" style="border-color: var(--border);">
+                <button class="action-btn p-2 rounded-lg hover:bg-opacity-10 transition-all" style="color: var(--muted-foreground);" title="Retry">
+                    <i class="fas fa-rotate-right text-sm"></i>
+                </button>
+                <button class="action-btn p-2 rounded-lg hover:bg-opacity-10 transition-all" style="color: var(--muted-foreground);" title="Copy">
+                    <i class="fas fa-copy text-sm"></i>
+                </button>
+                <button class="action-btn p-2 rounded-lg hover:bg-opacity-10 transition-all" style="color: var(--muted-foreground);" title="Like">
+                    <i class="fas fa-thumbs-up text-sm"></i>
+                </button>
+                <button class="action-btn p-2 rounded-lg hover:bg-opacity-10 transition-all" style="color: var(--muted-foreground);" title="Dislike">
+                    <i class="fas fa-thumbs-down text-sm"></i>
+                </button>
+            </div>
+        `;
+
+        articlesContainer.appendChild(article);
+        currentArticle = article;
+
+        return article;
+    }
+
+    function showAnswer(content) {
+        if (!currentArticle) return;
+
+        const thinkingIndicator = currentArticle.querySelector('#thinkingIndicator');
+        const answerContent = currentArticle.querySelector('#answerContent');
+        const actionButtons = currentArticle.querySelector('#actionButtons');
+
+        if (thinkingIndicator) {
+            thinkingIndicator.remove();
+        }
+
+        // Parse markdown and render
+        const html = marked.parse(content);
+        answerContent.innerHTML = html;
+
+        // Show action buttons
+        if (actionButtons) {
+            actionButtons.classList.remove('hidden');
+
+            // Add click handlers
+            const copyBtn = actionButtons.querySelector('.fa-copy').parentElement;
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(content);
+                copyBtn.innerHTML = '<i class="fas fa-check text-sm"></i>';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-copy text-sm"></i>';
+                }, 2000);
+            });
+        }
+
+        messageCount++;
+
+        // Scroll to show answer gradually
+        setTimeout(() => {
+            answerContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function addSource(source, index) {
+        const sourcesList = document.getElementById('sourcesList');
+        const sourcesCount = document.getElementById('sourcesCount');
+
+        if (index === 0) {
+            sourcesList.innerHTML = '';
+        }
+
+        const sourceCard = document.createElement('div');
+        sourceCard.className = 'source-card p-3 rounded-lg border cursor-pointer transition-all';
+        sourceCard.style.backgroundColor = 'var(--background)';
+        sourceCard.style.borderColor = 'var(--border)';
+        sourceCard.innerHTML = `
+            <div class="flex items-start gap-2">
+                <div class="w-8 h-8 rounded flex items-center justify-center flex-shrink-0" style="background-color: var(--muted);">
+                    <i class="fas fa-file-alt text-xs" style="color: var(--primary);"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium truncate mb-1">${source}</div>
+                    <div class="text-xs truncate" style="color: var(--muted-foreground);">aws.amazon +${index + 1}</div>
+                </div>
+            </div>
+        `;
+
+        sourcesList.appendChild(sourceCard);
+        sourcesCount.textContent = index + 1;
+    }
+
+    async function sendMessage() {
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        const article = createArticle(message);
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+
+        try {
+            const response = await fetch(getApiEndpoint(), {
+                method: getApiMethod(),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: getRequestBody(message)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const aiResponse = await response.text();
+            showAnswer(aiResponse);
+
+            // Simulate adding sources
+            if (currentMode !== 'simple') {
+                setTimeout(() => {
+                    addSource('domain-knowledge.pdf', 0);
+                    addSource('technical-docs.md', 1);
+                    addSource('spring-ai-reference.pdf', 2);
+                }, 500);
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            showAnswer(`**Error**: ${error.message}\n\nSorry, I encountered an error processing your request.`);
+        } finally {
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+        }
+    }
+
+    function getApiEndpoint() {
+        const baseUrl = '/api/v1';
+
+        switch (currentMode) {
+            case 'simple':
+                return `${baseUrl}/chat/${conversationId}?message=${encodeURIComponent(messageInput.value.trim())}`;
+            case 'domain':
+                return `${baseUrl}/domain/chat/${conversationId}`;
+            case 'auto-rag':
+                return `${baseUrl}/auto-rag/chat/${conversationId}`;
+            default:
+                return `${baseUrl}/domain/chat/${conversationId}`;
+        }
+    }
+
+    function getApiMethod() {
+        return currentMode === 'simple' ? 'GET' : 'POST';
+    }
+
+    function getRequestBody(message) {
+        if (currentMode === 'simple') {
+            return null;
+        }
+        return JSON.stringify({ message: message });
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    messageInput.focus();
+</script>
 </body>
 </html>
